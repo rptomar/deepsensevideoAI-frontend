@@ -63,45 +63,68 @@ export default function VideoAnalysis() {
     setUploadStatus('uploading');
     setError('');
 
-    // Simulated upload progress
-    const uploadInterval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(uploadInterval);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 500);
-
     try {
-      // Here you would typically:
-      // 1. Upload to cloud storage (AWS S3, Firebase, etc.)
-      // 2. Send to backend for processing
-      // 3. Get analysis results
+      // Create FormData for Cloudinary upload
+      const videoData = new FormData();
+      videoData.append('file', file);
+      videoData.append('upload_preset', 'deepsensevideo');
+      videoData.append('cloud_name', 'djxc36udi');
+
+      // Upload to Cloudinary
+      const cloudinaryResponse = await fetch(
+        'https://api.cloudinary.com/v1_1/djxc36udi/video/upload',
+        {
+          method: 'POST',
+          body: videoData,
+        }
+      );
+
+      if (!cloudinaryResponse.ok) {
+        throw new Error('Failed to upload to Cloudinary');
+      }
+
+      const cloudinaryData = await cloudinaryResponse.json();
+      const videoUrl = cloudinaryData.url;
+
+      // Update upload status to processing
+      setUploadStatus('processing');
       
-      // Simulated API call
-      setTimeout(() => {
-        clearInterval(uploadInterval);
-        setUploadStatus('processing');
-        
-        // Simulated analysis results
-        setTimeout(() => {
-          setUploadStatus('completed');
-          setAnalysis({
-            transcription: "Sample transcription of the video...",
-            summary: "This video contains...",
-            keyPoints: ["Point 1", "Point 2", "Point 3"],
-            sentiment: "Positive",
-            objects: ["Person", "Car", "Building"]
-          });
-        }, 3000);
-      }, 5000);
+      // Send video URL to analysis API
+      const analysisResponse = await fetch('/deepsensevideo/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ videoUrl }),
+      });
+
+      if (!analysisResponse.ok) {
+        throw new Error('Failed to analyze video');
+      }
+
+      const analysisData = await analysisResponse.json();
+
+      // Update status and display results
+      setUploadStatus('completed');
+      setAnalysis({
+        transcription: analysisData.transcription || "No transcription available",
+        summary: analysisData.summary || "No summary available",
+        keyPoints: analysisData.keyPoints || [],
+        sentiment: analysisData.sentiment || "Neutral",
+        objects: analysisData.objects || []
+      });
 
     } catch (err) {
-      setError('Failed to upload video. Please try again.');
+      console.error('Error:', err);
+      setError(err.message || 'Failed to upload and analyze video. Please try again.');
       setUploadStatus('error');
     }
+  };
+
+  // Add upload progress tracking
+  const uploadProgressCallback = (progressEvent) => {
+    const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+    setUploadProgress(progress);
   };
 
   const handleQuestionSubmit = async (e) => {
@@ -166,12 +189,18 @@ export default function VideoAnalysis() {
             <div className="h-2 w-full bg-gray-200 rounded-full">
               <div
                 className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                style={{ width: `${uploadProgress}%` }}
+                style={{ 
+                  width: uploadStatus === 'processing' ? '100%' : `${uploadProgress}%`,
+                  animation: uploadStatus === 'processing' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
+                }}
               ></div>
             </div>
             <div className="text-center text-gray-600">
-              {uploadStatus === 'uploading' ? 'Uploading video...' : 'Processing video...'}
-              {uploadStatus === 'uploading' && ` ${uploadProgress}%`}
+              {uploadStatus === 'uploading' ? (
+                <>Uploading video... {uploadProgress}%</>
+              ) : (
+                <>Analyzing video with AI... Please wait</>
+              )}
             </div>
           </div>
         )}
@@ -259,6 +288,18 @@ export default function VideoAnalysis() {
           </div>
         )}
       </div>
+
+      {/* Add this CSS to your global styles or as a style tag */}
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+      `}</style>
     </div>
   );
 }
