@@ -62,35 +62,48 @@ export default function VideoAnalysis() {
     setVideoFile(file);
     setUploadStatus('uploading');
     setError('');
+    setUploadProgress(0);
 
     try {
       // Create FormData for Cloudinary upload
       const videoData = new FormData();
       videoData.append('file', file);
-      videoData.append('upload_preset', 'deepsensevideo');
+      videoData.append('upload_preset', 'modernlane');
       videoData.append('cloud_name', 'djxc36udi');
 
-      // Upload to Cloudinary
-      const cloudinaryResponse = await fetch(
-        'https://api.cloudinary.com/v1_1/djxc36udi/video/upload',
-        {
-          method: 'POST',
-          body: videoData,
-        }
-      );
+      // Upload to Cloudinary with progress tracking
+      const cloudinaryResponse = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded * 100) / event.total);
+            setUploadProgress(progress);
+          }
+        };
 
-      if (!cloudinaryResponse.ok) {
-        throw new Error('Failed to upload to Cloudinary');
-      }
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            resolve(JSON.parse(xhr.response));
+          } else {
+            reject(new Error('Upload failed'));
+          }
+        };
 
-      const cloudinaryData = await cloudinaryResponse.json();
-      const videoUrl = cloudinaryData.url;
+        xhr.onerror = () => reject(new Error('Upload failed'));
 
-      // Update upload status to processing
-      setUploadStatus('processing');
-      
+        xhr.open('POST', 'https://api.cloudinary.com/v1_1/djxc36udi/video/upload');
+        xhr.send(videoData);
+      });
+
+      const videoUrl = cloudinaryResponse.url;
+
+      // Update status to analyzing
+      setUploadStatus('analyzing');
+      setUploadProgress(0); // Reset progress for analysis phase
+
       // Send video URL to analysis API
-      const analysisResponse = await fetch('/deepsensevideo/analyze', {
+      const analysisResponse = await fetch(process.env.REACT_APP_BASE_URL+'deepsensevideo/analyze/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,12 +132,6 @@ export default function VideoAnalysis() {
       setError(err.message || 'Failed to upload and analyze video. Please try again.');
       setUploadStatus('error');
     }
-  };
-
-  // Add upload progress tracking
-  const uploadProgressCallback = (progressEvent) => {
-    const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-    setUploadProgress(progress);
   };
 
   const handleQuestionSubmit = async (e) => {
@@ -184,24 +191,32 @@ export default function VideoAnalysis() {
         )}
 
         {/* Progress Bar */}
-        {(uploadStatus === 'uploading' || uploadStatus === 'processing') && (
+        {(uploadStatus === 'uploading' || uploadStatus === 'analyzing') && (
           <div className="space-y-4">
-            <div className="h-2 w-full bg-gray-200 rounded-full">
-              <div
-                className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                style={{ 
-                  width: uploadStatus === 'processing' ? '100%' : `${uploadProgress}%`,
-                  animation: uploadStatus === 'processing' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
-                }}
-              ></div>
-            </div>
-            <div className="text-center text-gray-600">
-              {uploadStatus === 'uploading' ? (
-                <>Uploading video... {uploadProgress}%</>
-              ) : (
-                <>Analyzing video with AI... Please wait</>
-              )}
-            </div>
+            {uploadStatus === 'uploading' ? (
+              <>
+                <div className="h-2 w-full bg-gray-200 rounded-full">
+                  <div
+                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <div className="text-center text-gray-600">
+                  Uploading video... {uploadProgress}%
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-600 rounded-full analyzing-animation"
+                  ></div>
+                </div>
+                <div className="text-center text-gray-600">
+                  DeepSenseVideo is analysing...
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -291,13 +306,23 @@ export default function VideoAnalysis() {
 
       {/* Add this CSS to your global styles or as a style tag */}
       <style jsx>{`
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
+        @keyframes analyzing {
+          0% {
+            width: 0%;
+            margin-left: 0%;
           }
           50% {
-            opacity: 0.5;
+            width: 30%;
+            margin-left: 70%;
           }
+          100% {
+            width: 0%;
+            margin-left: 100%;
+          }
+        }
+        
+        .analyzing-animation {
+          animation: analyzing 2s infinite;
         }
       `}</style>
     </div>
