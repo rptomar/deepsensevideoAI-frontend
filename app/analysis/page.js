@@ -6,7 +6,7 @@ export default function VideoAnalysis() {
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState('idle'); // idle, uploading, processing, completed, error
-  const [videoFile, setVideoFile] = useState(null);
+  //const [videoFile, setVideoFile] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [question, setQuestion] = useState('');
   const [answers, setAnswers] = useState([]);
@@ -15,7 +15,7 @@ export default function VideoAnalysis() {
   const [isAsking, setIsAsking] = useState(false);
   
   const inputRef = useRef(null);
-  const router = useRouter();
+  //const router = useRouter();
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -61,7 +61,7 @@ export default function VideoAnalysis() {
   };
 
   const handleVideoUpload = async (file) => {
-    setVideoFile(file);
+    //setVideoFile(file);
     setUploadStatus('uploading');
     setError('');
     setUploadProgress(0);

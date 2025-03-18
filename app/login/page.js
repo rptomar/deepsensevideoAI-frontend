@@ -38,7 +38,7 @@ export default function Login() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        //const data = await response.json();
         // Handle successful login (e.g., store token in localStorage)
         // localStorage.setItem('token', data.token);
         router.push('/analysis');
@@ -51,7 +51,7 @@ export default function Login() {
       console.log('Login attempt:', formData);
       //router.push('/dashboard');
     } catch (err) {
-      setError('Login failed. Please check your credentials.');
+      setError('Login failed. Please check your credentials.',err);
     }
   };
 
@@ -133,7 +133,7 @@ export default function Login() {
         </form>
         <div className="text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
               Register here
             </Link>

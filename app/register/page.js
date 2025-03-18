@@ -52,7 +52,7 @@ export default function Register() {
       console.log('Registration data:', formData);
       router.push('/login');
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError('Registration failed. Please try again.',err);
     }
   };
 

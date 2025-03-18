@@ -1,10 +1,9 @@
 'use client';
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function Home() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  //const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
