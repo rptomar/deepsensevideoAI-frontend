@@ -30,22 +30,26 @@ export default function Login() {
 
     try {
       // Here you would typically make an API call to your backend
-      // const response = await fetch('/api/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // });
+      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL + 'user/login/';
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
 
-      // if (response.ok) {
-      //   const data = await response.json();
-      //   // Handle successful login (e.g., store token in localStorage)
-      //   // localStorage.setItem('token', data.token);
-      //   router.push('/dashboard');
-      // }
+      if (response.ok) {
+        const data = await response.json();
+        // Handle successful login (e.g., store token in localStorage)
+        // localStorage.setItem('token', data.token);
+        router.push('/analysis');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Login failed. Please check your credentials.');
+      }
 
       // For now, just console.log the data
       console.log('Login attempt:', formData);
-      router.push('/dashboard');
+      //router.push('/dashboard');
     } catch (err) {
       setError('Login failed. Please check your credentials.');
     }
@@ -98,7 +102,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <div className="flex items-center">
               <input
                 id="remember-me"
@@ -116,7 +120,7 @@ export default function Login() {
                 Forgot your password?
               </Link>
             </div>
-          </div>
+          </div> */}
 
           <div>
             <button

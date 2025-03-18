@@ -37,15 +37,16 @@ export default function Register() {
 
     try {
       // Here you would typically make an API call to your backend
-      // const response = await fetch('/api/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // });
+      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL + 'user/register/';
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
 
-      // if (response.ok) {
-      //   router.push('/login');
-      // }
+      if (response.ok) {
+        router.push('/login');
+      }
 
       // For now, just console.log the data
       console.log('Registration data:', formData);
