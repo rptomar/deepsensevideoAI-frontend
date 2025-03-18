@@ -76,6 +76,8 @@ DeepSenseVideo AI is a streamlined web application that allows users to upload s
 
 ## Technical Decisions and Trade-offs
 
+- **User Management:** Implemented user authentication and authorization for a more secure application.
+
 - **Frontend Framework:**
   - Chose Next.js for its server-side rendering capabilities and built-in routing, which enhances performance and SEO.
 
