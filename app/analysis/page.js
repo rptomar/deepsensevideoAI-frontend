@@ -11,6 +11,8 @@ export default function VideoAnalysis() {
   const [question, setQuestion] = useState('');
   const [answers, setAnswers] = useState([]);
   const [error, setError] = useState('');
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [isAsking, setIsAsking] = useState(false);
   
   const inputRef = useRef(null);
   const router = useRouter();
@@ -96,58 +98,79 @@ export default function VideoAnalysis() {
         xhr.send(videoData);
       });
 
-      const videoUrl = cloudinaryResponse.url;
+      const video = cloudinaryResponse.url;
+      setVideoUrl(video);
 
       // Update status to analyzing
       setUploadStatus('analyzing');
       setUploadProgress(0); // Reset progress for analysis phase
-
+      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL+'deepsensevideo/analyze/';
+      console.log('apiUrl',apiUrl,process.env.NEXT_PUBLIC_BASE_API_URL);
       // Send video URL to analysis API
-      const analysisResponse = await fetch(process.env.REACT_APP_BASE_URL+'deepsensevideo/analyze/', {
+      const analysisResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ videoUrl }),
+        body: JSON.stringify({ videourl:video }),
       });
+      console.log('analysisResponse',analysisResponse);
 
       if (!analysisResponse.ok) {
         throw new Error('Failed to analyze video');
       }
 
       const analysisData = await analysisResponse.json();
-
-      // Update status and display results
+      console.log('analysisResponse analysisData',analysisData);
+      // Simply set the entire response as the analysis
       setUploadStatus('completed');
-      setAnalysis({
-        transcription: analysisData.transcription || "No transcription available",
-        summary: analysisData.summary || "No summary available",
-        keyPoints: analysisData.keyPoints || [],
-        sentiment: analysisData.sentiment || "Neutral",
-        objects: analysisData.objects || []
-      });
+      setAnalysis(analysisData.analysis);
 
     } catch (err) {
       console.error('Error:', err);
-      setError(err.message || 'Failed to upload and analyze video. Please try again.');
+      setError('Failed to process video analysis. Please try again.');
       setUploadStatus('error');
     }
   };
 
   const handleQuestionSubmit = async (e) => {
     e.preventDefault();
-    if (!question.trim()) return;
+    if (!question.trim() || !videoUrl) return;
 
+    setIsAsking(true);
     try {
-      // Simulated AI Q&A response
-      const response = "This is a simulated answer to your question about the video...";
-      setAnswers(prev => [...prev, { question, answer: response }]);
+      const apiUrl = process.env.NEXT_PUBLIC_BASE_API_URL + 'analyze/ask/';
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videourl: videoUrl,
+          question: question
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get answer');
+      }
+
+      const data = await response.json();
+      setAnswers(prev => [...prev, { 
+        question: question, 
+        answer: data.analysis || "No answer available"
+      }]);
       setQuestion('');
+      setError('');
     } catch (err) {
+      console.error('Error:', err);
       setError('Failed to get answer. Please try again.');
+    } finally {
+      setIsAsking(false);
     }
   };
 
+  console.log('answers',answers);
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -224,47 +247,20 @@ export default function VideoAnalysis() {
         {uploadStatus === 'completed' && analysis && (
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Analysis Results</h2>
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+                Analysis Results
+              </h2>
               
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-gray-700 dark:text-gray-300">Transcription</h3>
-                  <p className="text-gray-600 dark:text-gray-400">{analysis.transcription}</p>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-gray-700 dark:text-gray-300">Summary</h3>
-                  <p className="text-gray-600 dark:text-gray-400">{analysis.summary}</p>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-gray-700 dark:text-gray-300">Key Points</h3>
-                  <ul className="list-disc pl-5 text-gray-600 dark:text-gray-400">
-                    {analysis.keyPoints.map((point, index) => (
-                      <li key={index}>{point}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-gray-700 dark:text-gray-300">Objects Detected</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.objects.map((object, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm"
-                      >
-                        {object}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                <pre className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 font-sans">
+                  {analysis}
+                </pre>
               </div>
             </div>
 
             {/* Q&A Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Ask Questions</h2>
+              <h2 className="text-xl font-semibold mb-4">Ask Questions About the Video</h2>
               
               <form onSubmit={handleQuestionSubmit} className="space-y-4">
                 <input
@@ -273,21 +269,52 @@ export default function VideoAnalysis() {
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Ask a question about the video..."
                   className="w-full px-4 py-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  disabled={isAsking}
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                  className={`px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center justify-center ${
+                    isAsking ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                  disabled={isAsking}
                 >
-                  Ask Question
+                  {isAsking ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    'Ask Question'
+                  )}
                 </button>
               </form>
 
               {answers.length > 0 && (
-                <div className="mt-4 space-y-4">
+                <div className="mt-6 space-y-6">
                   {answers.map((qa, index) => (
-                    <div key={index} className="border-t pt-4">
-                      <p className="font-medium text-gray-700 dark:text-gray-300">Q: {qa.question}</p>
-                      <p className="text-gray-600 dark:text-gray-400">A: {qa.answer}</p>
+                    <div 
+                      key={index} 
+                      className="border-t pt-4 first:border-t-0 first:pt-0"
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                          <span className="text-indigo-600 font-medium">Q</span>
+                        </div>
+                        <p className="text-gray-800 dark:text-gray-200">
+                          {qa.question}
+                        </p>
+                      </div>
+                      <div className="flex items-start space-x-3 mt-3">
+                        <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-green-600 font-medium">A</span>
+                        </div>
+                        <p className="text-gray-600 dark:text-gray-300">
+                          {qa.answer}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
