@@ -1,6 +1,5 @@
 'use client';
 import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function VideoAnalysis() {
   const [dragActive, setDragActive] = useState(false);
