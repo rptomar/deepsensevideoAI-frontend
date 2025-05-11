@@ -120,10 +120,12 @@ export default function VideoAnalysis() {
       }
 
       const analysisData = await analysisResponse.json();
-      console.log('analysisResponse analysisData',analysisData);
-      // Simply set the entire response as the analysis
+      console.log('analysisResponse analysisData', analysisData);
       setUploadStatus('completed');
-      setAnalysis(analysisData.analysis);
+      setAnalysis({
+        summary: analysisData.summary,
+        detectedObjects: analysisData.detectedObjects
+      });
 
     } catch (err) {
       console.error('Error:', err);
@@ -250,10 +252,36 @@ export default function VideoAnalysis() {
                 Analysis Results
               </h2>
               
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                <pre className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 font-sans">
-                  {analysis}
-                </pre>
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 space-y-6">
+                {/* Summary Section */}
+                {analysis?.summary && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold mb-2">Summary</h3>
+                    <p className="text-gray-700 dark:text-gray-300">{analysis.summary}</p>
+                  </div>
+                )}
+
+                {/* Detected Objects Section */}
+                {analysis?.detectedObjects && analysis.detectedObjects.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Detected Objects</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {analysis.detectedObjects.map((object, index) => (
+                        <div key={index} className="bg-white dark:bg-gray-600 p-4 rounded-lg shadow">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg capitalize">{object.name}</span>
+                            <span className="bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-2 py-1 rounded-full text-sm">
+                              {object.confidence}% confidence
+                            </span>
+                          </div>
+                          <div className="mt-2 text-gray-600 dark:text-gray-300">
+                            Count: {object.count}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
